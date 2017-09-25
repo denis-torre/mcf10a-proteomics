@@ -58,16 +58,53 @@ def getPairwiseGeneCorrelations(expression_dataframe):
             target = expression_dataframe.index[j]
             
             # Index genes
-            cor_results = ss.pearsonr(x, y)
+            cor_results = ss.spearmanr(x, y)
             
             # Add
-            correlation_list.append({'source': source, 'target':target, 'pearson_r': cor_results[0], 'pvalue': cor_results[1]})
+            correlation_list.append({'source': source, 'target':target, 'spearman_r': cor_results[0], 'pvalue': cor_results[1]})
     
     # Convert to dataframe
     correlation_dataframe = pd.DataFrame(correlation_list)
     
     # Return
     return correlation_dataframe
+
+#############################################
+########## 2. Subtract DMSO
+#############################################
+
+def subtractDMSO(correlation_dataframe):
+
+	# Get DMSO
+	dmso_dataframe = correlation_dataframe.loc['DMSO'].set_index(['source', 'target'])
+
+	# Drop DMSO
+	correlation_dataframe.drop('DMSO', inplace=True)
+
+	# Initialize list
+	dataframe_list = []
+
+	# Loop through drugs
+	for drugName in correlation_dataframe.index.unique():
+	    
+	    # Get subset
+	    drug_dataframe = correlation_dataframe.loc[drugName].set_index(['source', 'target'])
+	    
+	    # Subtract
+	    subtracted_dataframe = dmso_dataframe.loc[drug_dataframe.index] - drug_dataframe
+	    
+	    # Add drug
+	    subtracted_dataframe['drug_name'] = drugName
+	    
+	    # Append
+	    dataframe_list.append(subtracted_dataframe)
+	    
+	# Concatenate
+	concatenated_subtracted_dataframe = pd.concat(dataframe_list).reset_index().drop('pvalue', axis=1).rename(columns={'spearman_r': 'spearman_r_diff'})
+
+	# Return
+	return concatenated_subtracted_dataframe
+
 
 #######################################################
 #######################################################
